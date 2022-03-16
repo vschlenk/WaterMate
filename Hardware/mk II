@@ -1,0 +1,58 @@
+// Load libraries
+#include "BluetoothSerial.h"
+
+
+// Check if Bluetooth configs are enabled
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+
+// Bluetooth Serial object
+BluetoothSerial SerialBT;
+
+
+// flowrate sensor
+unsigned char flowsensor = 17; // Sensor Input
+volatile int flow_frequency;
+float vol = 0.0, l_sec;
+unsigned long currentTime;
+unsigned long cloopTime;
+
+// Timer: auxiliar variables
+unsigned long previousMillis = 0;    // Stores last time temperature was published
+const long interval = 10000;         // interval at which to publish sensor readings
+
+void setup() {
+
+  Serial.begin(115200);
+  // Bluetooth device name
+  SerialBT.begin("WaterMate1");
+  Serial.println("The device started, now you can pair it with bluetooth!");
+
+
+  //setting up flowrate monitor
+  pinMode(flowsensor, INPUT); 
+  digitalWrite(flowsensor, HIGH); // Optional Internal Pull-Up
+  attachInterrupt(digitalPinToInterrupt(flowsensor), flow, RISING); // Setup Interrupt
+    
+}
+void flow () // Interrupt function
+{
+   flow_frequency++;
+}
+void loop() {
+
+    currentTime = millis();
+    cloopTime = currentTime;
+    
+     // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.
+      l_sec = ((flow_frequency / 7.5)/60);
+      vol += l_sec;
+     
+      SerialBT.println("Vol: ");
+      SerialBT.println(vol);
+
+      delay(8000);
+
+       flow_frequency = 0; // Reset Counter
+}
